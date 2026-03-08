@@ -1,0 +1,10 @@
+PREFIX rdfs: <>
+PREFIX sl: <>
+PREFIX xsd: <>
+
+<#Book> {
+  a [ sl:Book ]
+    // rdfs:comment "A book contains (implicitly) zero to many translations" ;
+  rdfs:label xsd:string
+    // rdfs:comment "The label/title of this book" ;
+}

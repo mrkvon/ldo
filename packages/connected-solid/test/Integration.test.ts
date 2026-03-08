@@ -1,21 +1,31 @@
-import {
-  namedNode,
-  quad as createQuad,
-  literal,
-  defaultGraph,
-} from "@ldo/rdf-utils";
-import type { CreateSuccess } from "../src/requester/results/success/CreateSuccess";
-import { Buffer } from "buffer";
-import { PostShShapeType } from "./.ldo/post.shapeTypes";
 import type {
-  ServerHttpError,
-  UnauthenticatedHttpError,
-  UnexpectedHttpError,
-} from "../src/requester/results/error/HttpErrorResult";
-import type { NoncompliantPodError } from "../src/requester/results/error/NoncompliantPodError";
-import type { GetStorageContainerFromWebIdSuccess } from "../src/requester/results/success/CheckRootContainerSuccess";
-import { wait } from "./utils.helper";
+  AggregateError,
+  AggregateSuccess,
+  ConnectedLdoDataset,
+  IgnoredInvalidUpdateSuccess,
+  InvalidUriError,
+  UnexpectedResourceError,
+  UpdateDefaultGraphSuccess,
+  UpdateSuccess,
+} from "@ldo/connected";
+import {
+  changeData,
+  commitData,
+  ConnectedLdoTransactionDataset,
+} from "@ldo/connected";
+import { getDataset, set } from "@ldo/ldo";
+import {
+  quad as createQuad,
+  defaultGraph,
+  literal,
+  namedNode,
+} from "@ldo/rdf-utils";
+import type { ResourceInfo } from "@ldo/test-solid-server";
+import { createApp, setupServer } from "@ldo/test-solid-server";
+import { Buffer } from "buffer";
 import path from "path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getStorageFromWebId } from "../src/getStorageFromWebId";
 import type {
   GetWacRuleSuccess,
   UpdateResultError,
@@ -30,24 +40,16 @@ import {
   type SolidLeafUri,
 } from "../src/index";
 import type {
-  AggregateError,
-  AggregateSuccess,
-  IgnoredInvalidUpdateSuccess,
-  InvalidUriError,
-  UnexpectedResourceError,
-  UpdateDefaultGraphSuccess,
-  UpdateSuccess,
-  ConnectedLdoDataset,
-} from "@ldo/connected";
-import {
-  changeData,
-  commitData,
-  ConnectedLdoTransactionDataset,
-} from "@ldo/connected";
-import { getStorageFromWebId } from "../src/getStorageFromWebId";
-import type { ResourceInfo } from "@ldo/test-solid-server";
-import { createApp, setupServer } from "@ldo/test-solid-server";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+  ServerHttpError,
+  UnauthenticatedHttpError,
+  UnexpectedHttpError,
+} from "../src/requester/results/error/HttpErrorResult";
+import type { NoncompliantPodError } from "../src/requester/results/error/NoncompliantPodError";
+import type { GetStorageContainerFromWebIdSuccess } from "../src/requester/results/success/CheckRootContainerSuccess";
+import type { CreateSuccess } from "../src/requester/results/success/CreateSuccess";
+import { BookShapeType } from "./.ldo/book.shapeTypes";
+import { PostShShapeType } from "./.ldo/post.shapeTypes";
+import { wait } from "./utils.helper";
 
 const ROOT_CONTAINER = "http://localhost:3001/";
 const WEB_ID = "http://localhost:3001/example/profile/card#me";
@@ -1571,6 +1573,87 @@ describe("Integration", () => {
           ),
         ),
       ).toBe(true);
+    });
+
+    it.only("does not throw a strange error", async () => {
+      // root is a Container
+      const root = solidLdoDataset.getResource(TEST_CONTAINER_URI);
+
+      // create a subfolder of root
+      const bookName = "" + new Date().getUTCFullYear();
+      const bookContainer = root.child(`${bookName}/`);
+      const result1 = await bookContainer.createIfAbsent();
+      if (result1.isError) {
+        throw {
+          prepared: false,
+          message: "Creating book folder: " + result1.message,
+        };
+      }
+
+      // create an index in the subfolder
+      const bookIndex = bookContainer.child("index");
+      const result2 = await bookIndex.createIfAbsent();
+      if (result2.isError) {
+        throw {
+          prepared: false,
+          message: "Creating book index: " + result2.message,
+        };
+      }
+
+      const book = solidLdoDataset.createData(
+        BookShapeType,
+        bookIndex.uri,
+        bookIndex,
+      );
+      book.type = set({ "@id": "Book" }); // <---- this line is creating the error
+      book.label = bookName;
+      const changes = (
+        getDataset(book) as ConnectedLdoTransactionDataset<[]>
+      ).getChanges();
+
+      console.log(
+        "added:",
+        changes.added?.toArray(),
+        "removed:",
+        changes.removed?.toArray(),
+      );
+
+      const result3 = await commitData(book);
+      if (result3.isError) {
+        throw "Populating book index: " + result3.message;
+      }
+      // console.log(result3);
+      // console.log(solidLdoDataset.toArray());
+
+      const bookIndex2 = bookContainer.child("index2");
+      const result4 = await bookIndex.createIfAbsent();
+      if (result4.isError) {
+        throw {
+          prepared: false,
+          message: "Creating book index: " + result4.message,
+        };
+      }
+      const book2 = solidLdoDataset.createData(
+        BookShapeType,
+        bookIndex.uri,
+        bookIndex2,
+      );
+
+      book2.type = set({ "@id": "Book" });
+      book2.label = bookName;
+
+      const changes2 = (
+        getDataset(book2) as ConnectedLdoTransactionDataset<[]>
+      ).getChanges();
+
+      console.log("*************************");
+      console.log(
+        "added:",
+        changes2.added?.toArray(),
+        "removed:",
+        changes2.removed?.toArray(),
+      );
+      console.log("dataset", solidLdoDataset.toArray());
     });
 
     it("handles an error when committing data", async () => {
