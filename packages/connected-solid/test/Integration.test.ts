@@ -120,6 +120,9 @@ const REDIRECT_RESOURCE_TTL = `
 <#me> a foaf:Person.
 `;
 
+const REDIRECT_CONTAINER_SOURCE_URI = "https://source.local/container_source/";
+const REDIRECT_CONTAINER_TARGET_URI = TEST_CONTAINER_URI;
+
 const resourceInfo: ResourceInfo = {
   slug: TEST_CONTAINER_SLUG,
   isContainer: true,
@@ -528,6 +531,77 @@ describe("Integration", () => {
           namedNode("http://xmlns.com/foaf/0.1/Person"),
         ).size,
       ).toBe(1);
+    });
+
+    it("the resource keeps a reference to its redirected url", async () => {
+      s.fetchMock.mockResolvedValueOnce(
+        new MockResponse(REDIRECT_RESOURCE_TTL, {
+          status: 200,
+          headers: { "content-type": "text/turtle" },
+          url: REDIRECT_RESOURCE_TARGET_URI,
+          redirected: true,
+        }),
+      );
+
+      const resource = solidLdoDataset.getResource(
+        REDIRECT_RESOURCE_SOURCE_URI,
+      );
+      expect(resource.uri).toBe(REDIRECT_RESOURCE_SOURCE_URI);
+      const result = await resource.read();
+      expect(result.type).toBe("dataReadSuccess");
+      expect(resource.uri).toBe(REDIRECT_RESOURCE_TARGET_URI);
+    });
+
+    it("the container keeps a reference to its redirected url", async () => {
+      s.fetchMock.mockResolvedValueOnce(
+        new MockResponse(TEST_CONTAINER_TTL, {
+          status: 200,
+          headers: { "content-type": "text/turtle" },
+          url: REDIRECT_CONTAINER_TARGET_URI,
+          redirected: true,
+        }),
+      );
+
+      const container = solidLdoDataset.getResource(
+        REDIRECT_CONTAINER_SOURCE_URI,
+      );
+      expect(container.uri).toBe(REDIRECT_CONTAINER_SOURCE_URI);
+      const result = await container.read();
+      expect(result.type).toBe("containerReadSuccess");
+      expect(container.uri).toBe(REDIRECT_CONTAINER_TARGET_URI);
+    });
+
+    it.todo(
+      "handles a redirect from a resource-like URL to container (and vice-versa)",
+    );
+
+    it("remembers the resource by both its original as well as final url", async () => {
+      s.fetchMock.mockResolvedValueOnce(
+        new MockResponse(REDIRECT_RESOURCE_TTL, {
+          status: 200,
+          headers: { "content-type": "text/turtle" },
+          url: REDIRECT_RESOURCE_TARGET_URI,
+          redirected: true,
+        }),
+      );
+
+      const resource = solidLdoDataset.getResource(
+        REDIRECT_RESOURCE_SOURCE_URI,
+      );
+
+      await resource.read();
+      expect(resource.uri).toBe(REDIRECT_RESOURCE_TARGET_URI);
+
+      const sameResourceSource = solidLdoDataset.getResource(
+        REDIRECT_RESOURCE_SOURCE_URI,
+      );
+
+      const sameResourceTarget = solidLdoDataset.getResource(
+        REDIRECT_RESOURCE_TARGET_URI,
+      );
+
+      expect(resource).toEqual(sameResourceSource);
+      expect(resource).toEqual(sameResourceTarget);
     });
   });
 

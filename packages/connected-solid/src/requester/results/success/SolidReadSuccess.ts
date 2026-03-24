@@ -2,6 +2,10 @@ import type { ConnectedResult } from "@ldo/connected";
 import { ReadSuccess, type Resource } from "@ldo/connected";
 import type { SolidLeaf } from "../../../resources/SolidLeaf";
 import type { SolidContainer } from "../../../resources/SolidContainer";
+import type {
+  SolidContainerUri,
+  SolidLeafUri,
+} from "packages/connected-solid/src/types.js";
 
 /**
  * Indicates that the read request was successful and that the resource
@@ -23,8 +27,9 @@ export class BinaryReadSuccess extends ReadSuccess<SolidLeaf> {
     recalledFromMemory: boolean,
     blob: Blob,
     mimeType: string,
+    uri: SolidLeafUri,
   ) {
-    super(resource, recalledFromMemory);
+    super(resource, recalledFromMemory, uri);
     this.blob = blob;
     this.mimeType = mimeType;
   }
@@ -53,8 +58,9 @@ export class ContainerReadSuccess extends ReadSuccess<SolidContainer> {
     resource: SolidContainer,
     recalledFromMemory: boolean,
     isRootContainer: boolean,
+    uri: SolidContainerUri,
   ) {
-    super(resource, recalledFromMemory);
+    super(resource, recalledFromMemory, uri);
     this.isRootContainer = isRootContainer;
   }
 }

@@ -20,13 +20,18 @@ export abstract class ResourceSuccess<
    */
   uri: ResourceType["uri"];
   /**
+   * The URI of the request
+   */
+  requestUri: ResourceType["uri"];
+  /**
    * The resource that was successful
    */
   resource: ResourceType;
 
-  constructor(resource: ResourceType) {
+  constructor(resource: ResourceType, uri: ResourceType["uri"]) {
     super();
-    this.uri = resource.uri;
+    this.uri = uri;
+    this.requestUri = resource.uri;
     this.resource = resource;
   }
 }

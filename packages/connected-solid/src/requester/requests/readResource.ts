@@ -21,6 +21,7 @@ import {
   addRawTurtleToDataset,
   addResourceRdfToContainer,
 } from "../../util/rdfUtils";
+import type { SolidContainerUri, SolidLeafUri } from "../../types.js";
 
 /**
  * All possible return values for reading a leaf
@@ -90,7 +91,7 @@ export async function readResource(
         );
       }
 
-      return new AbsentReadSuccess(resource, false) as
+      return new AbsentReadSuccess(resource, false, response.url) as
         | AbsentReadSuccess<SolidLeaf>
         | AbsentReadSuccess<SolidContainer>;
     }
@@ -135,9 +136,10 @@ export async function readResource(
           resource,
           false,
           result.isRootContainer,
+          response.url as SolidContainerUri,
         );
       }
-      return new DataReadSuccess(resource as SolidLeaf, false);
+      return new DataReadSuccess(resource as SolidLeaf, false, response.url);
     } else {
       // Load Blob
       const blob = await response.blob();
@@ -146,6 +148,7 @@ export async function readResource(
         false,
         blob,
         contentType,
+        response.url as SolidLeafUri,
       );
     }
   } catch (err) {

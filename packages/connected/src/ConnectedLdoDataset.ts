@@ -162,6 +162,22 @@ export class ConnectedLdoDataset<
     return resource as any;
   }
 
+  addAlias<
+    Name extends Plugins[number]["name"],
+    Plugin extends Extract<Plugins[number], { name: Name }>,
+  >(aliasUri: string, canonicalUri: string, pluginName?: Name) {
+    const plugin = this.getValidPlugin(canonicalUri, pluginName);
+    if (!plugin) return;
+    const normalizedAlias = plugin.normalizeUri?.(aliasUri) ?? aliasUri;
+    const normalizedCanonical =
+      plugin.normalizeUri?.(canonicalUri) ?? canonicalUri;
+
+    const resource = this.resourceMap.get(normalizedCanonical);
+    if (resource) {
+      this.resourceMap.set(normalizedAlias, resource);
+    }
+  }
+
   getResources(): GetResourceReturnType<Plugins[number], string>[] {
     return Array.from(this.resourceMap.values());
   }

@@ -13,8 +13,12 @@ export abstract class ReadSuccess<
    */
   recalledFromMemory: boolean;
 
-  constructor(resource: ResourceType, recalledFromMemory: boolean) {
-    super(resource);
+  constructor(
+    resource: ResourceType,
+    recalledFromMemory: boolean,
+    uri: Resource["uri"],
+  ) {
+    super(resource, uri);
     this.recalledFromMemory = recalledFromMemory;
   }
 }

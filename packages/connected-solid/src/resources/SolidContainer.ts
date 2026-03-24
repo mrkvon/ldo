@@ -53,9 +53,9 @@ import type { DatasetChanges } from "@ldo/rdf-utils";
  */
 export class SolidContainer extends SolidResource {
   /**
-   * The URI of the container
+   * The URI of the container (private)
    */
-  readonly uri: SolidContainerUri;
+  #uri: SolidContainerUri;
 
   /**
    * @internal
@@ -98,9 +98,16 @@ export class SolidContainer extends SolidResource {
     context: ConnectedContext<SolidConnectedPlugin[]>,
   ) {
     super(context);
-    this.uri = uri;
+    this.#uri = uri;
     this.requester = new ContainerBatchedRequester(this, context);
-    this.status = new Unfetched(this);
+    this.status = new Unfetched(this, this.#uri);
+  }
+
+  /**
+   * The URI of the container
+   */
+  get uri() {
+    return this.#uri;
   }
 
   /**
@@ -157,6 +164,8 @@ export class SolidContainer extends SolidResource {
    */
   async read(): Promise<ReadContainerResult> {
     const result = (await this.handleRead()) as ReadContainerResult;
+    this.context.dataset.addAlias(result.uri, this.uri);
+    this.#uri = result.uri;
     return { ...result, resource: this };
   }
 
@@ -171,6 +180,7 @@ export class SolidContainer extends SolidResource {
         isError: false,
         type: "absentReadSuccess",
         uri: this.uri,
+        requestUri: this.uri,
         recalledFromMemory: true,
         resource: this,
       };
@@ -179,6 +189,7 @@ export class SolidContainer extends SolidResource {
         isError: false,
         type: "containerReadSuccess",
         uri: this.uri,
+        requestUri: this.uri,
         recalledFromMemory: true,
         isRootContainer: this.isRootContainer()!,
         resource: this,
@@ -188,7 +199,7 @@ export class SolidContainer extends SolidResource {
 
   /**
    * Makes a request to read this container if it hasn't been fetched yet. If it
-   * has, return the cached informtation
+   * has, return the cached information
    * @returns a ReadContainerResult
    *
    * @example
@@ -584,6 +595,6 @@ export class SolidContainer extends SolidResource {
   async update(
     _datasetChanges: DatasetChanges,
   ): Promise<IgnoredInvalidUpdateSuccess<this>> {
-    return new IgnoredInvalidUpdateSuccess(this);
+    return new IgnoredInvalidUpdateSuccess(this, this.uri);
   }
 }

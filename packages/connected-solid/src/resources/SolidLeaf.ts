@@ -37,11 +37,6 @@ import type { SolidContainer } from "./SolidContainer";
  */
 export class SolidLeaf extends SolidResource {
   /**
-   * The URI of the leaf
-   */
-  readonly uri: SolidLeafUri;
-
-  /**
    * @internal
    * Batched Requester for the Leaf
    */
@@ -74,6 +69,11 @@ export class SolidLeaf extends SolidResource {
   protected binaryData: { blob: Blob; mimeType: string } | undefined;
 
   /**
+   * The URI of the leaf (private, writeable)
+   */
+  #uri: SolidLeafUri;
+
+  /**
    * @param uri - The uri of the leaf
    * @param context - SolidLdoDatasetContext for the parent dataset
    */
@@ -84,9 +84,9 @@ export class SolidLeaf extends SolidResource {
     super(context);
     const uriObject = new URL(uri);
     uriObject.hash = "";
-    this.uri = uriObject.toString() as SolidLeafUri;
+    this.#uri = uriObject.toString() as SolidLeafUri;
     this.requester = new LeafBatchedRequester(this, context);
-    this.status = new Unfetched(this);
+    this.status = new Unfetched(this, this.#uri);
   }
 
   /**
@@ -94,6 +94,13 @@ export class SolidLeaf extends SolidResource {
    * GETTERS
    * ===========================================================================
    */
+
+  /**
+   * The URI of the leaf
+   */
+  get uri() {
+    return this.#uri;
+  }
 
   /**
    * Checks to see if the resource is currently uploading data
@@ -243,6 +250,8 @@ export class SolidLeaf extends SolidResource {
    */
   async read(): Promise<ReadLeafResult> {
     const result = (await this.handleRead()) as ReadLeafResult;
+    this.context.dataset.addAlias(result.uri, this.uri);
+    this.#uri = result.uri;
     if (result.isError) return result;
     return { ...result, resource: this };
   }
@@ -254,16 +263,17 @@ export class SolidLeaf extends SolidResource {
    */
   protected toReadResult(): ReadLeafResult {
     if (this.isAbsent()) {
-      return new AbsentReadSuccess(this, true);
+      return new AbsentReadSuccess(this, true, this.uri);
     } else if (this.isBinary()) {
       return new BinaryReadSuccess(
         this,
         true,
         this.binaryData!.blob,
         this.binaryData!.mimeType,
+        this.uri,
       );
     } else {
-      return new DataReadSuccess(this, true);
+      return new DataReadSuccess(this, true, this.uri);
     }
   }
 

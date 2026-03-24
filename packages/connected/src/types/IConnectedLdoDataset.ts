@@ -80,6 +80,20 @@ export interface IConnectedLdoDataset<Plugins extends ConnectedPlugin[]>
   ): GetResourceReturnType<Plugin, UriType>;
 
   /**
+   * @param aliasUri
+   * @param canonicalUri
+   * @param pluginName
+   */
+  addAlias<
+    Name extends Plugins[number]["name"],
+    Plugin extends Extract<Plugins[number], { name: Name }>,
+  >(
+    aliasUri: string,
+    canonicalUri: string,
+    pluginName?: Name,
+  ): void;
+
+  /**
    * Retireves a representation of all Resources referenced by this dataset
    * This does not necessarily mean that it's been fetched (use the
    * `getFetchedResources` method for that). It simply means that at one point
